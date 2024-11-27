@@ -3,3 +3,6 @@ node_modules/
 
 # Ignore the .env file containing sensitive environment variables
 .env
+
+# Ignore catetan
+src/catetan_index.mjs
