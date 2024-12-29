@@ -37,6 +37,7 @@ router.post(
         res.status(200).json({
           message: "Login successful!",
           session: req.session.passport,
+          role: req.user.role,
         });
       });
     })(req, res, next);
@@ -65,12 +66,14 @@ router.post(
 
       const savedUser = await newUser.save(); // ! Harus menggunakan await karena save() sifatnya async, tambahkan async di depan (req, res)
 
-      const newNotification = new Notification({
-        title: "Welcome, " + savedUser.username,
-        content: "Thank you for using IsyaratKu!",
-        targetUser: savedUser._id,
-      });
-      await newNotification.save();
+      if (savedUser.role === "user") {
+        const newNotification = new Notification({
+          title: "Welcome, " + savedUser.username,
+          content: "Thank you for using IsyaratKu!",
+          targetUser: savedUser._id,
+        });
+        await newNotification.save();
+      }
 
       req.login(savedUser, (err) => {
         if (err) {

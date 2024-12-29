@@ -7,19 +7,42 @@ import {
   Image,
   Dimensions,
   FlatList,
+  TouchableOpacity,
 } from "react-native";
 import background from "../../assets/background/app-background.png";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import RenderNotifications from "../../components/RenderNotifications";
 import Loading from "../../components/Loading";
 
 const NotificationsPage = () => {
   const baseUrl = process.env.EXPO_PUBLIC_BASE_URL;
+  const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+
+  const fetchUserInfo = async () => {
+    const url = `${baseUrl}/api/user/profile`;
+
+    try {
+      const response = await axios.get(url);
+      const result = response.data;
+      const { user } = result;
+
+      if (!user) {
+        throw new Error("Authorization expired or invalid");
+      }
+
+      setUser(user);
+    } catch (error) {
+      alert("Error fetching user info!");
+      await SecureStore.deleteItemAsync("sessionToken");
+      router.replace("/login");
+    }
+  };
 
   const fetchNotifications = async () => {
     const url = `${baseUrl}/api/notifications`;
@@ -43,9 +66,9 @@ const NotificationsPage = () => {
   };
 
   // ? useEffect cmn dilakukin saat screen dirender pertama kali
-  // useEffect(() => {
-  //   fetchNotifications();
-  // }, []);
+  useEffect(() => {
+    fetchUserInfo();
+  }, []);
 
   // ? useFocusEffect dilakukin saat screen dirender
   useFocusEffect(
@@ -86,6 +109,20 @@ const NotificationsPage = () => {
           ></FlatList>
         </View>
       </SafeAreaView>
+
+      {/* Add notification for admin */}
+      {user.role === "admin" ? (
+        <View style={styles.addButtonContainer}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push("../add/notification")}
+          >
+            <Ionicons name="add" size={36} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <></>
+      )}
     </ImageBackground>
   );
 };
@@ -188,5 +225,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "gray",
     marginLeft: 4,
+  },
+  addButtonContainer: {
+    position: "absolute",
+    bottom: 84,
+    right: 20,
+  },
+  addButton: {
+    backgroundColor: "white",
+    borderRadius: "50%",
+    padding: 8,
+    shadowColor: "black",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

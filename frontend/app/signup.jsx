@@ -48,8 +48,6 @@ export default function SignUpPage() {
       });
       const result = response.data;
       const { message, session } = result;
-      console.log(message);
-      console.log(session);
 
       const storeSession = async (token) => {
         try {
@@ -206,6 +204,7 @@ export default function SignUpPage() {
                   keyboardType="email-address"
                   value={email}
                   onChangeText={setEmail}
+                  autoCapitalize="none"
                 />
               </View>
               {emailError ? (
@@ -229,6 +228,7 @@ export default function SignUpPage() {
                   secureTextEntry={!isPasswordVisible}
                   value={password}
                   onChangeText={setPassword}
+                  autoCapitalize="none"
                 />
                 <TouchableOpacity
                   onPress={() => setPasswordVisible((prev) => !prev)}
@@ -262,6 +262,7 @@ export default function SignUpPage() {
                   secureTextEntry={!isConfirmPasswordVisible}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
+                  autoCapitalize="none"
                 />
                 <TouchableOpacity
                   onPress={() => setConfirmPasswordVisible((prev) => !prev)}

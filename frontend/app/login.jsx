@@ -32,13 +32,12 @@ const LoginPage = () => {
 
   const handleLogIn = async (username, password) => {
     const url = `${baseUrl}/api/auth/login`;
-
     setLoading(true);
 
     try {
       const response = await axios.post(url, { username, password });
       const result = response.data;
-      const { message, session } = result;
+      const { message, session, role } = result;
 
       const storeSession = async (token) => {
         try {
@@ -156,6 +155,7 @@ const LoginPage = () => {
                   color="#000000"
                   style={styles.icon}
                 />
+
                 <TextInput
                   placeholder="Username"
                   value={username}
@@ -164,6 +164,7 @@ const LoginPage = () => {
                   placeholderTextColor="#545454"
                 />
               </View>
+
               {usernameError ? (
                 <Text style={styles.errorMessage}>{usernameError}</Text>
               ) : null}
@@ -178,6 +179,7 @@ const LoginPage = () => {
                   color="#000000"
                   style={styles.icon}
                 />
+
                 <TextInput
                   placeholder="Password"
                   value={password}
@@ -185,7 +187,9 @@ const LoginPage = () => {
                   style={styles.input}
                   placeholderTextColor="#545454"
                   secureTextEntry={!isPasswordVisible}
+                  autoCapitalize="none"
                 />
+
                 <TouchableOpacity
                   onPress={() => setPasswordVisible((prev) => !prev)}
                   style={styles.iconRight}
@@ -197,6 +201,7 @@ const LoginPage = () => {
                   />
                 </TouchableOpacity>
               </View>
+
               {passwordError ? (
                 <Text style={styles.errorMessage}>{passwordError}</Text>
               ) : null}

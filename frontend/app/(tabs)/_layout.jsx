@@ -1,15 +1,30 @@
 import { View, Text, TouchableOpacity } from "react-native";
-import React from "react";
-import { Tabs } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { Tabs, useFocusEffect, useSegments } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet } from "react-native";
 import CustomCameraButton from "../../components/CustomCameraButton";
 
 const TabsLayout = () => {
+  const segments = useSegments();
+  const [shouldHideTabBar, setShouldHideTabBar] = useState(false);
+
+  const pagesToHideTabBar = ["changePassword", "privacyPolicy"];
+
+  useEffect(() => {
+    // Update tab bar visibility whenever the route changes
+    const currentPage = segments[segments.length - 1];
+    setShouldHideTabBar(pagesToHideTabBar.includes(currentPage));
+  }, [segments]);
+
   return (
     <Tabs
       screenOptions={{
-        tabBarStyle: styles.tabBar,
+        // tabBarStyle: styles.tabBar,
+        tabBarStyle: {
+          ...styles.tabBar,
+          display: shouldHideTabBar ? "none" : "flex",
+        },
         tabBarShowLabel: false,
         tabBarIconStyle: styles.tabBarContainer,
       }}
@@ -86,7 +101,7 @@ const TabsLayout = () => {
               />
             </View>
           ),
-          tabBarLabel: "profile",
+          tabBarLabel: "Profile",
           animation: "shift",
         }}
       />

@@ -4,14 +4,20 @@ import { Ionicons } from "@expo/vector-icons";
 import imageUrl from "../assets/image/course-default.png";
 import { useRouter } from "expo-router";
 
-const RenderCourses = ({ item, onPress }) => {
-  const router = useRouter();
-  const [selectedItem, setSelectedItem] = useState(null);
-
+const RenderCourses = ({ item, onPress, onPressAdmin, user }) => {
   return (
-    <View style={styles.courseCard}>
+    <TouchableOpacity
+      onPress={user.role === "admin" ? onPressAdmin : onPress}
+      key={item._id}
+      style={styles.courseCard}
+    >
       <View style={styles.courseInfoContainer}>
-        <Image source={imageUrl} style={styles.courseImage} />
+        {item.image ? (
+          <Image source={{ uri: item.image }} style={styles.courseImage} />
+        ) : (
+          <Image source={imageUrl} style={styles.courseImage} />
+        )}
+
         <View style={{ width: "60%" }}>
           <Text
             style={styles.courseTitle}
@@ -26,14 +32,18 @@ const RenderCourses = ({ item, onPress }) => {
         </View>
       </View>
 
-      <TouchableOpacity
-        style={styles.enrollButton}
-        onPress={onPress}
-        key={item._id}
-      >
-        <Text style={styles.enrollText}>ENROLL</Text>
-      </TouchableOpacity>
-    </View>
+      {user.role === "admin" ? (
+        <Ionicons
+          name="chevron-forward-circle-outline"
+          size={32}
+          color={"#2BC1F8"}
+        />
+      ) : (
+        <View style={styles.enrollButton}>
+          <Text style={styles.enrollText}>ENROLL</Text>
+        </View>
+      )}
+    </TouchableOpacity>
   );
 };
 
@@ -90,6 +100,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  checkButton: {},
   enrollText: {
     color: "white",
     fontWeight: "bold",

@@ -15,10 +15,15 @@ import {
 } from "../utils/crypting/hashPassword.mjs";
 import { enrollCourseValidationSchema } from "../utils/validationSchema/userValid.mjs";
 import { Payment } from "../mongoose/schemas/payment.mjs";
+import multer from "multer";
+import { storage, fileFilter } from "../utils/helper/multerConfig.mjs";
+import { uploadProfileImage } from "../utils/helper/azureStorageServices.mjs";
+import { randomUUID } from "crypto";
+import fs from "fs";
+import path from "path";
 
 const router = Router();
-
-// * TODO buat endpoint untuk POST foto profil
+const upload = multer({ storage, fileFilter });
 
 // ? Get all user
 router.get("/", async (req, res) => {
@@ -30,7 +35,6 @@ router.get("/", async (req, res) => {
 });
 
 // ? Get user profile
-// * TODO tambahin attribut foto profil di GET profile
 router.get("/profile", (req, res) => {
   if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
@@ -42,6 +46,7 @@ router.get("/profile", (req, res) => {
             username: req.user.username,
             email: req.user.email,
             role: req.user.role,
+            profileImage: req.user.profileImage,
           },
         })
       : res.status(401).json({ error: "Unauthorized" });
@@ -53,17 +58,10 @@ router.get("/profile", (req, res) => {
 
 // ? GET enrolled course
 router.get("/courses", async (req, res) => {
-  // * TODO buat if statement untuk mengecek apakah status course sudah paid
   if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    const user = await User.findById(req.user._id).populate({
-      path: "enrolledCourses",
-      populate: {
-        path: "lessons",
-        model: "Lesson",
-      },
-    }); // ? Cara agar kita bisa ngepopulate semua attribut yang berhubungan
+    const user = await User.findById(req.user._id).populate("enrolledCourses");
 
     if (!user) return res.status(404).json({ error: "User not found" });
     if (user.enrolledCourses.length === 0)
@@ -74,6 +72,68 @@ router.get("/courses", async (req, res) => {
     res.status(200).json({ enrolledCourses: user.enrolledCourses });
   } catch (err) {
     console.log("Error in GET /api/user/course route:", err);
+    res.status(500).json({ error: "Internal Server error" });
+  }
+});
+
+// ? Upload profile image
+router.patch("/upload/profile-image", async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: "Unauthorized" });
+
+  try {
+    await new Promise((resolve, reject) => {
+      upload.single("profileImage")(req, res, (err) => {
+        if (err) {
+          return res.status(400).json({ error: err.message });
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    if (!req.file) return res.status(400).json({ error: "No file uploaded." });
+
+    const randomId = randomUUID();
+    const blobName = `${randomId}.png`;
+
+    const imageUrl = await uploadProfileImage(
+      req.user._id,
+      req.file.path,
+      blobName
+    );
+
+    const user = await User.findById(req.user._id);
+    user.profileImage = imageUrl;
+    await user.save();
+
+    const filePath = path.join(
+      "isyaratku",
+      req.user._id.toString(),
+      req.file.filename
+    );
+
+    // ? Menghapus file yang sudah di save setelah 10 menit
+    setTimeout(async () => {
+      try {
+        await fs.promises.unlink(filePath); // ! Menghapus file
+
+        // ? Menghapus folder user id jika kosong
+        const dir = path.dirname(filePath);
+        const filesInDir = await fs.promises.readdir(dir);
+        if (filesInDir.length === 0) {
+          await fs.promises.rmdir(dir);
+        }
+      } catch (err) {
+        console.error("Error deleting file:", err);
+      }
+    }, 600000); // ! 10 menit
+
+    res.status(200).json({
+      message: "Profile image uploaded successfully",
+      filePath: imageUrl,
+    });
+  } catch (err) {
+    console.log("Error in PATCH /api/user/upload/profile-image route:", err);
     res.status(500).json({ error: "Internal Server error" });
   }
 });
@@ -196,16 +256,17 @@ router.patch(
   checkSchema(changePasswordValidationSchema),
   checkValidation,
   async (req, res) => {
+    if (!req.user) return res.status(401).json({ errors: ["Unauthorized"] });
+
     try {
       const data = matchedData(req);
+
+      if (!comparePassword(data.oldPassword, req.user.password))
+        return res.status(400).json({ errors: ["Invalid credentials"] });
+
       const newPasswordHashed = (data.newPassword = hashPassword(
         data.newPassword
       ));
-
-      if (!req.user) return res.status(401).json({ error: "Unauthorized" });
-
-      if (!comparePassword(data.oldPassword, req.user.password))
-        return res.status(400).json({ error: "Invalid credentials" });
 
       // ? Update the password in the database
       const updatedUser = await User.findByIdAndUpdate(
@@ -215,13 +276,13 @@ router.patch(
       );
 
       if (!updatedUser) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ errors: ["User not found"] });
       }
 
       res.status(200).json({ message: "Password changed succesfully" });
     } catch (err) {
       console.log("Error in PATCH /api/user/changePassword route:", err);
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ errors: ["Internal server error"] });
     }
   }
 );
@@ -249,7 +310,7 @@ router.delete("/deleteAccount", async (req, res) => {
       });
     });
   } catch (err) {
-    console.log("Error in DELETE /api/user route:", err);
+    console.log("Error in DELETE /api/user/deleteAccount route:", err);
     res.status(500).json({ error: "Internal server error" });
   }
 });

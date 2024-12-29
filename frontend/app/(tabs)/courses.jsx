@@ -32,6 +32,27 @@ const CoursesPage = () => {
   const [searchValue, setSearchValue] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState("");
+  const [user, setUser] = useState(null);
+
+  const fetchUserInfo = async () => {
+    const url = `${baseUrl}/api/user/profile`;
+
+    try {
+      const response = await axios.get(url);
+      const result = response.data;
+      const { user } = result;
+
+      if (!user) {
+        throw new Error("Authorization expired or invalid");
+      }
+
+      setUser(user);
+    } catch (error) {
+      alert("Error fetching user info!");
+      await SecureStore.deleteItemAsync("sessionToken");
+      router.replace("/login");
+    }
+  };
 
   const fetchCourses = async () => {
     const url = `${baseUrl}/api/courses`;
@@ -65,7 +86,7 @@ const CoursesPage = () => {
       const response = await axios.post(url, { courseId });
       const result = response.data;
       const { message } = result;
-      
+
       alert(message);
     } catch (error) {
       if (error.response) {
@@ -111,6 +132,7 @@ const CoursesPage = () => {
 
   useFocusEffect(
     useCallback(() => {
+      fetchUserInfo();
       fetchCourses();
       setSearchValue("");
       setSearchError(null);
@@ -180,12 +202,17 @@ const CoursesPage = () => {
               data={courses}
               keyExtractor={(item) => item._id}
               showsVerticalScrollIndicator={false}
+              horizontal={false}
               contentContainerStyle={styles.courseListContainer}
               renderItem={({ item }) => (
                 <View>
                   <RenderCourses
                     item={item}
                     onPress={() => handleEnrollCourse(item._id)}
+                    onPressAdmin={() =>
+                      router.push(`/courseDetail/${item._id}`)
+                    }
+                    user={user}
                   />
 
                   {/* Modal */}
@@ -227,6 +254,20 @@ const CoursesPage = () => {
           )}
         </View>
       </SafeAreaView>
+
+      {/* Add course for admin */}
+      {user.role === "admin" ? (
+        <View style={styles.addButtonContainer}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push("../add/course")}
+          >
+            <Ionicons name="add" size={36} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <></>
+      )}
     </ImageBackground>
   );
 };
@@ -298,10 +339,11 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   courseSection: {
-    flexGrow: 1,
+    flex: 1,
   },
   courseListContainer: {
     overflow: "hidden",
+    paddingBottom: 128,
   },
   modalBackground: {
     flex: 1,
@@ -342,5 +384,20 @@ const styles = StyleSheet.create({
     textAlign: "center",
     color: "darkblue",
     // marginTop: 140,
+  },
+  addButtonContainer: {
+    position: "absolute",
+    bottom: 84,
+    right: 20,
+  },
+  addButton: {
+    backgroundColor: "white",
+    borderRadius: "50%",
+    padding: 8,
+    shadowColor: "black",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { mongo } from "mongoose";
 
 const userSchema = new mongoose.Schema({
   username: {
@@ -25,6 +25,10 @@ const userSchema = new mongoose.Schema({
       ref: "Course",
     },
   ],
+  profileImage: {
+    type: mongoose.Schema.Types.String,
+    default: "",
+  },
 });
 
 export const User = mongoose.model("User", userSchema);

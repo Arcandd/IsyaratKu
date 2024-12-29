@@ -51,67 +51,66 @@ const PaymentPage = () => {
     <SafeAreaView style={styles.container}>
       {/* Back button */}
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <AntDesign name="arrowleft" size={32} color="gray" />
+        <AntDesign name="arrowleft" size={32} color="black" />
       </TouchableOpacity>
 
-      {/* Payment amount */}
-      <TextInput
-        style={{
-          backgroundColor: "lightgray",
-          marginHorizontal: 20,
-          marginTop: 64,
-          paddingHorizontal: 12,
-        }}
-        placeholder="Insert amount"
-        value={amount}
-        onChangeText={(text) => setAmount(text)}
-      />
+      <View>
+        {/* Payment amount */}
+        <TextInput
+          style={{
+            backgroundColor: "lightgray",
+            marginHorizontal: 20,
+            marginTop: 64,
+            paddingHorizontal: 12,
+          }}
+          placeholder="Insert amount"
+          value={amount}
+          onChangeText={(text) => setAmount(text)}
+        />
 
-      {/* Payment methods */}
-      <View
-        style={{
-          flexDirection: "row",
-          flexWrap: "wrap",
-          paddingHorizontal: 20,
-          marginTop: 20,
-        }}
-      >
-        {methods.map((item) => (
-          <TouchableOpacity
-            key={item}
-            style={{
-              backgroundColor: "rgba(0, 0, 0, 0.4)",
-              justifyContent: "center",
-              alignItems: "center",
-              borderRadius: 4,
-              paddingHorizontal: 16,
-              paddingVertical: 8,
-              marginHorizontal: 4,
-              marginBottom: 8,
-            }}
-            onPress={() => setMethod(item)}
-          >
-            <Text style={{ color: "white", fontWeight: "500" }}>
-              {item.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {/* Payment methods */}
+        <View
+          style={{
+            flexDirection: "row",
+            flexWrap: "wrap",
+            paddingHorizontal: 20,
+            marginTop: 20,
+          }}
+        >
+          {methods.map((item) => (
+            <TouchableOpacity
+              key={item}
+              style={{
+                backgroundColor: "#F4F4F4",
+                borderWidth: 2,
+                borderColor: method === item ? "purple" : "transparent",
+                justifyContent: "center",
+                alignItems: "center",
+                borderRadius: 4,
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                marginHorizontal: 4,
+                marginBottom: 8,
+              }}
+              onPress={() => setMethod(item)}
+            >
+              <Text style={{ color: "black", fontWeight: "500" }}>
+                {item.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
-
-      <Text>
-        {amount},{method}
-      </Text>
 
       {/* Pay button */}
       <TouchableOpacity
         style={{
-          backgroundColor: "blue",
+          backgroundColor: "#FFA722",
           marginHorizontal: 20,
           justifyContent: "center",
           alignItems: "center",
           paddingVertical: 4,
           marginTop: 60,
-          height: 40,
         }}
         onPress={() => handlePayment(id, Number(amount), method)}
         disabled={loading}
@@ -138,6 +137,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingVertical: 20,
+    justifyContent: "space-between",
+    backgroundColor: "white",
   },
   backButton: {
     position: "absolute",

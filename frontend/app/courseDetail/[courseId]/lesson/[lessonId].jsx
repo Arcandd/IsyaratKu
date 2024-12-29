@@ -1,4 +1,6 @@
 import {
+  ActivityIndicator,
+  Button,
   Dimensions,
   ImageBackground,
   StyleSheet,
@@ -6,13 +8,15 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import axios from "axios";
 import Loading from "../../../../components/Loading";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import AntDesign from "@expo/vector-icons/AntDesign";
+import { useVideoPlayer, VideoView } from "expo-video";
+import { useEvent } from "expo";
 
 const LessonPage = () => {
   const baseUrl = process.env.EXPO_PUBLIC_BASE_URL;
@@ -21,6 +25,17 @@ const LessonPage = () => {
   const [lesson, setLesson] = useState(null);
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState(null);
+  const [videoSource, setVideoSource] = useState("");
+
+  // ? Video stuff
+  const player = useVideoPlayer(videoSource, (player) => {
+    player.loop = false;
+    player.play();
+  });
+  // ! Kalo mau ngecek status, pake ini. (Mending jangan diapus sih ini comment e, soale expo-video tu library baru)
+  const { status } = useEvent(player, "statusChange", {
+    status: player.status,
+  });
 
   const fetchLesson = async () => {
     const url = `${baseUrl}/api/courses/${courseId}/lesson/${lessonId}`;
@@ -31,6 +46,7 @@ const LessonPage = () => {
       const { lesson } = result;
       setLesson(lesson);
       setCourse(lesson.courseId);
+      setVideoSource(lesson.material);
     } catch (error) {
       if (error.response) {
         const errors = error.response.data.error;
@@ -67,7 +83,6 @@ const LessonPage = () => {
 
         <View style={styles.titleContainer}>
           <Text style={styles.courseTitle}>{course.title}</Text>
-          {/* <Text style={styles.lessonTitle}>{lesson.title}</Text> */}
         </View>
 
         <View style={styles.card}>
@@ -77,9 +92,21 @@ const LessonPage = () => {
           <Text style={styles.deliveryModeTitle}>Delivery Mode</Text>
           <Text style={styles.deliveryMode}>YouTube Video</Text>
 
-          {/* Video */}
-          <View style={styles.videoCard}>
-            <Text style={{ color: "#FFF", textAlign: "center" }}>Video</Text>
+          <View style={styles.videoContainer}>
+            {status === "loading" ? (
+              <ActivityIndicator
+                size="large"
+                color="white"
+                style={styles.loadingIndicator}
+              />
+            ) : (
+              <VideoView
+                style={styles.video}
+                player={player}
+                allowsFullscreen
+                contentFit="contain"
+              />
+            )}
           </View>
         </View>
       </SafeAreaView>
@@ -147,11 +174,15 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     paddingBottom: 12,
   },
-  videoCard: {
-    backgroundColor: "black",
-    borderRadius: 20,
-    height: "32%",
-    overflow: "hidden",
+  videoContainer: {
+    alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "black",
+    width: "100%",
+    height: 275,
+  },
+  video: {
+    width: "100%",
+    height: 275,
   },
 });

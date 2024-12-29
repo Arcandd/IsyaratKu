@@ -120,26 +120,26 @@ export const changeUsernameValidationSchema = {
 export const changePasswordValidationSchema = {
   oldPassword: {
     notEmpty: {
-      errorMessage: "Password can not be empty",
+      errorMessage: "Old password can not be empty",
     },
     isString: {
-      errorMessage: "Password must be a string",
+      errorMessage: "Old password must be a string",
     },
     isLength: {
       options: { min: 8, max: 20 },
-      errorMessage: "Password must be atleast 8-20 characters",
+      errorMessage: "Old password must be atleast 8-20 characters",
     },
   },
   newPassword: {
     notEmpty: {
-      errorMessage: "Password can not be empty",
+      errorMessage: "New password can not be empty",
     },
     isString: {
-      errorMessage: "Password must be a string",
+      errorMessage: "New password must be a string",
     },
     isLength: {
       options: { min: 8, max: 20 },
-      errorMessage: "Password must be atleast 8-20 characters",
+      errorMessage: "New password must be atleast 8-20 characters",
     },
   },
 };

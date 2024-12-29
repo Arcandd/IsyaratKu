@@ -51,9 +51,9 @@ export const createPaymentValidationMethod = {
       errorMessage: "Payment method must be a string",
     },
     isIn: {
-      options: [["OVO", "GoPay", "DANA", "PayPal", "Credit Card"]],
+      options: [["OVO", "GoPay", "DANA", "PayPal", "Master Card"]],
       errorMessage:
-        "Payment method must be either 'OVO', 'GoPay', 'DANA', 'Paypal' or 'Credit Card'",
+        "Payment method must be either 'OVO', 'GoPay', 'DANA', 'Paypal' or 'Master Card'",
     },
     notEmpty: {
       errorMessage: "Payment method can not be empty",

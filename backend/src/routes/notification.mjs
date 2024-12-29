@@ -44,22 +44,22 @@ router.post(
   checkSchema(createNotificationValidationSchema),
   checkValidation,
   async (req, res) => {
+    console.log("Inside create notification api");
     if (!req.user || req.user.role === "user")
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ errors: ["Unauthorized!"] });
 
     const data = matchedData(req);
 
     try {
       if (data.targetUser) {
         if (!(await User.findById(data.targetUser)))
-          return res.status(404).json({ error: "User not found" });
+          return res.status(404).json({ errors: ["User not found!"] });
       }
 
       const newNotification = new Notification(data);
       const savedNotification = await newNotification.save();
       res.status(201).json({
         message: "Successfully created a notification",
-        notification: savedNotification,
       });
     } catch (err) {
       console.log(

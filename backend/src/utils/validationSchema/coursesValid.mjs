@@ -84,9 +84,4 @@ export const addLessonValidationSchema = {
       errorMessage: "The title of the lesson must be a string",
     },
   },
-  material: {
-    notEmpty: {
-      errorMessage: "The material of the lesson can not be empty",
-    },
-  },
 };

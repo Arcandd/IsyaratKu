@@ -24,6 +24,46 @@ const CourseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState(null);
   const [lessons, setLessons] = useState([]);
+  const [error, setError] = useState("");
+  const [user, setUser] = useState(null);
+
+  const fetchUser = async () => {
+    const url = `${baseUrl}/api/user/profile`;
+
+    try {
+      const response = await axios.get(url);
+      const result = response.data;
+      const { user } = result;
+
+      if (!user) {
+        throw new Error("Authorization expired or invalid");
+      }
+
+      setUser(user);
+    } catch (error) {
+      alert("Error fetching user info!");
+      await SecureStore.deleteItemAsync("sessionToken");
+      router.replace("/login");
+    }
+  };
+
+  const fetchCourse = async () => {
+    const url = `${baseUrl}/api/courses/${courseId}`;
+
+    try {
+      const response = await axios.get(url);
+      const result = response.data;
+      const { course } = result;
+      setCourse(course);
+    } catch (error) {
+      if (error.response) {
+        const errors = error.response.data.error;
+        alert(errors);
+      } else {
+        alert(error.message);
+      }
+    }
+  };
 
   const fetchLessons = async () => {
     const url = `${baseUrl}/api/courses/${courseId}/lessons`;
@@ -33,28 +73,35 @@ const CourseDetail = () => {
       const result = response.data;
       const { message, course, lessons } = result;
       setLessons(lessons);
-      setCourse(course);
     } catch (error) {
       if (error.response) {
         const errors = error.response.data.error;
-        alert(errors);
+
+        if (errors.includes("The course has no lessons")) setError(errors);
+        else alert(errors);
       } else {
         alert(error.message);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
-  // useFocusEffect(
-  //   useCallback(() => {
-  //     fetchCourse();
-  //   }, [])
-  // );
+  useFocusEffect(
+    useCallback(() => {
+      const fetchData = async () => {
+        try {
+          await fetchUser();
+          await fetchCourse();
+          await fetchLessons();
+        } catch (error) {
+          alert(error);
+        } finally {
+          setLoading(false);
+        }
+      };
 
-  useEffect(() => {
-    fetchLessons();
-  }, []);
+      fetchData();
+    }, [])
+  );
 
   if (loading) {
     return <Loading />;
@@ -77,29 +124,63 @@ const CourseDetail = () => {
 
           <Text style={styles.title}>{course.title}</Text>
 
+          <Text style={styles.descriptionTitle}>Description:</Text>
+          <Text style={styles.description}>{course.description}</Text>
+
           <View style={styles.lessonsContainer}>
             <Text style={styles.lessonsTitle}>Lessons:</Text>
 
-            {lessons.map((lesson) => (
-              <TouchableOpacity
-                key={lesson._id}
-                style={styles.lessonCard}
-                onPress={() =>
-                  router.push(`courseDetail/${course._id}/lesson/${lesson._id}`)
-                }
-              >
-                <View style={styles.lessonCardContent}>
-                  <Text style={styles.lessonTitle}>{lesson.title}</Text>
+            <View>
+              {lessons.length > 0 ? (
+                lessons.map((lesson, index) => (
+                  <TouchableOpacity
+                    key={lesson._id}
+                    style={styles.lessonCard}
+                    onPress={() =>
+                      router.push(
+                        `courseDetail/${course._id}/lesson/${lesson._id}`
+                      )
+                    }
+                  >
+                    <View style={styles.lessonCardContent}>
+                      <Text
+                        style={styles.lessonTitle}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        Lesson {index + 1}: {lesson.title}
+                      </Text>
+                    </View>
+
+                    <Ionicons
+                      name="chevron-forward-circle-outline"
+                      size={24}
+                      color="#00aaff"
+                    />
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{error}!</Text>
                 </View>
-                <Ionicons
-                  name="chevron-forward-circle-outline"
-                  size={24}
-                  color="#00aaff"
-                />
-              </TouchableOpacity>
-            ))}
+              )}
+            </View>
           </View>
         </SafeAreaView>
+
+        {/* Add lesson for admin */}
+        {user.role === "admin" ? (
+          <View style={styles.addButtonContainer}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => router.push(`/add/lesson?id=${courseId}`)} // ? Cara untuk passing value pake query, nanti di page selanjut e pake useLocalSearchParams()
+            >
+              <Ionicons name="add" size={36} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <></>
+        )}
       </ImageBackground>
     </ScrollView>
   );
@@ -126,13 +207,23 @@ const styles = StyleSheet.create({
     color: "white",
     marginTop: 56,
   },
-  lessonsContainer: {
+  descriptionTitle: {
+    fontWeight: "bold",
+    fontSize: 24,
     marginTop: 80,
+    marginBottom: 4,
+  },
+  description: {
+    fontWeight: "400",
+    fontSize: 14,
+  },
+  lessonsContainer: {
+    marginTop: 20,
   },
   lessonsTitle: {
     fontWeight: "bold",
     fontSize: 24,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   lessonCard: {
     flexDirection: "row",
@@ -141,7 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 10,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 16,
     shadowColor: "black",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.4,
@@ -165,9 +256,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "black",
+    marginRight: 20,
   },
   arrowText: {
     fontSize: 20,
     color: "#00aaff",
+  },
+  errorContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    height: "72%",
+  },
+  errorText: {
+    color: "red",
+    fontSize: 16,
+  },
+  addButtonContainer: {
+    position: "absolute",
+    bottom: 32,
+    right: 20,
+  },
+  addButton: {
+    backgroundColor: "white",
+    borderRadius: "50%",
+    padding: 8,
+    shadowColor: "black",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 4,
   },
 });

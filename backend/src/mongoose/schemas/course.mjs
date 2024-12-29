@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
 
 const courseSchema = new mongoose.Schema({
-  // image: {
-  //   type: mongoose.Schema.Types.ObjectId,
-  //   ref: "CourseImage",
-  // },
+  image: {
+    type: mongoose.Schema.Types.String,
+    default: "",
+  },
   title: {
     type: mongoose.Schema.Types.String,
     required: true,
@@ -49,31 +49,9 @@ const lessonsSchema = new mongoose.Schema({
     required: true,
   },
   material: {
-    type: mongoose.Schema.Types.Mixed,
-    required: true,
+    type: mongoose.Schema.Types.String,
+    default: "",
   },
 });
 
 export const Lesson = mongoose.model("Lesson", lessonsSchema);
-
-// const courseImageSchema = new mongoose.Schema({
-//   course: {
-//     type: mongoose.Schema.Types.ObjectId,
-//     required: true,
-//     unique: true,
-//   },
-//   name: {
-//     type: mongoose.Schema.Types.String,
-//     required: true,
-//   },
-//   data: {
-//     type: mongoose.Schema.Types.Buffer,
-//     required: true,
-//   },
-//   contentType: {
-//     type: mongoose.Schema.Types.String,
-//     required: true,
-//   },
-// });
-
-// export const CourseImage = mongoose.model("CourseImage", courseImageSchema);

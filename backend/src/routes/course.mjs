@@ -1,13 +1,33 @@
 import { Router } from "express";
-import { checkSchema, matchedData } from "express-validator";
+import { check, checkSchema, matchedData } from "express-validator";
 import {
   addCourseValidationSchema,
   addLessonValidationSchema,
 } from "../utils/validationSchema/coursesValid.mjs";
 import { checkValidation } from "../utils/middlewares/checkValidation.mjs";
 import { Course, Lesson } from "../mongoose/schemas/course.mjs";
+import {
+  uploadCourseImage,
+  uploadLessonVideo,
+} from "../utils/helper/azureStorageServices.mjs";
+import multer from "multer";
+import {
+  videoStorage,
+  videoFilter,
+  courseImageStorage,
+  courseImageFileFilter,
+} from "../utils/helper/multerConfig.mjs";
+import fs from "fs";
+import "dotenv/config";
+import { User } from "../mongoose/schemas/user.mjs";
 
 const router = Router();
+const upload = multer({ storage: videoStorage, fileFilter: videoFilter });
+const uploadImage = multer({
+  storage: courseImageStorage,
+  fileFilter: courseImageFileFilter,
+});
+const account_name = process.env.AZURE_ACCOUNT;
 
 // ? Get all course
 router.get("/", async (req, res) => {
@@ -28,7 +48,6 @@ router.get("/", async (req, res) => {
 
 // ? Search courses that contains {title} (ini buat search bar) /search?value=intro to
 router.get("/search", async (req, res) => {
-  console.log("Inside search endpoint");
   if (!req.user) return res.status(401).json({ error: "Unauthorized" });
 
   const {
@@ -130,29 +149,58 @@ router.get("/:courseId/lesson/:lessonId", async (req, res) => {
 });
 
 // ? Add course
-// * TODO Tambahin attribut buat foto course
 router.post(
   "/addCourse",
+  uploadImage.single("image"),
   checkSchema(addCourseValidationSchema),
   checkValidation,
   async (req, res) => {
+    console.log("Inside add course api");
     if (!req.user || req.user.role === "user")
-      return res.status(401).json({ error: "Unauthorized" });
-
-    const data = matchedData(req);
+      return res.status(401).json({ errors: ["Unauthorized"] });
 
     try {
+      const data = matchedData(req);
       const newCourse = new Course(data);
+
+      if (newCourse.type === "Paid" && newCourse.price === 0)
+        return res
+          .status(400)
+          .json({ errors: ["Course price cannot be empty!"] });
 
       if (
         await Course.findOne({
           title: { $regex: newCourse.title, $options: "i" },
         })
       )
-        return res.status(400).json({ error: "Course already exist" });
+        return res.status(400).json({ errors: ["Course already exist!"] });
 
-      const savedCourses = await newCourse.save(); // ! Harus menggunakan await karena save() sifatnya async, tambahkan async di depan (req, res)
-      return res.status(201).json(savedCourses);
+      const savedCourse = await newCourse.save(); // ! Harus menggunakan await karena save() sifatnya async, tambahkan async di depan (req, res)
+
+      if (!req.file)
+        return res.status(400).json({ errors: ["No file uploaded!"] });
+
+      const imageUrl = await uploadCourseImage(
+        savedCourse._id,
+        req.file.path,
+        req.file.originalname
+      );
+
+      if (imageUrl) {
+        savedCourse.image = imageUrl;
+        await savedCourse.save();
+      }
+
+      // ? Menghapus file setelah berhasil di upload ke azure
+      fs.unlink(req.file.path, (err) => {
+        if (err) {
+          console.error("Error deleting file from disk:", err);
+        } else {
+          console.log("File deleted from disk after upload");
+        }
+      });
+
+      return res.status(201).json({ message: "Course added succesfully!" });
     } catch (err) {
       console.log("Error in GET /api/courses/addCourse route:", err);
       res.status(500).json({ error: "Internal Server error" });
@@ -163,11 +211,12 @@ router.post(
 // ? Add lesson
 router.post(
   "/addLesson",
+  upload.single("material"),
   checkSchema(addLessonValidationSchema),
   checkValidation,
   async (req, res) => {
     if (!req.user || req.user.role === "user")
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ errors: ["Unauthorized"] });
 
     try {
       const data = matchedData(req);
@@ -180,16 +229,40 @@ router.post(
         })) &&
         (await Lesson.findOne({ courseId: newLesson.courseId }))
       )
-        return res.status(400).json({ error: "Lesson already exist" });
+        return res.status(400).json({ errors: ["Lesson already exist"] });
       if (!findCourse)
-        return res.status(404).json({ error: "Course does not exist" });
+        return res.status(404).json({ errors: ["Course does not exist"] });
+      if (!req.file)
+        return res.status(400).json({ errors: ["No file uploaded."] });
 
       const savedLesson = await newLesson.save(); // ! Harus menggunakan await karena save() sifatnya async, tambahkan async di depan (req, res)
       findCourse.lessons.push(savedLesson._id);
       await findCourse.save();
-      res.status(201).json(savedLesson);
+
+      const videoUrl = await uploadLessonVideo(
+        data.courseId,
+        data.title,
+        req.file.path,
+        req.file.originalname
+      );
+
+      if (videoUrl) {
+        savedLesson.material = videoUrl;
+        await savedLesson.save();
+      }
+
+      // ? Menghapus file setelah berhasil di upload ke azure
+      fs.unlink(req.file.path, (err) => {
+        if (err) {
+          console.error("Error deleting file from disk:", err);
+        } else {
+          console.log("File deleted from disk after upload");
+        }
+      });
+
+      res.status(201).json({ message: "Lesson successsfully added" });
     } catch (err) {
-      console.log("Error in GET /api/courses/addLesson route:", err);
+      console.log("Error in POST /api/courses/addLesson route:", err);
       res.status(500).json({ error: "Internal Server error" });
     }
   }
@@ -210,12 +283,22 @@ router.delete("/deleteCourse/:id", async (req, res) => {
     if (!findCourseID)
       return res.status(404).json({ error: "Course does not exist" });
 
+    // await deleteBlob("isyaratku/course-videos", id);
+
+    if (findCourseID.lessons.length !== 0)
+      await Lesson.deleteMany({ courseId: findCourseID._id });
+
     await Course.deleteOne({ _id: findCourseID });
+    // ? Menghapus course di dalam dokumen User
+    await User.updateMany(
+      { enrolledCourses: findCourseID._id },
+      { $pull: { enrolledCourses: findCourseID._id } }
+    );
 
     res
       .status(200)
       .json({ message: `Successfully deleted ${findCourseID.title}` });
-  } catch (error) {
+  } catch (err) {
     console.log("Error in DELETE /api/courses/deleteCourse/:id route", err);
     res.status(500).json({ error: "Internal Server Error" });
   }

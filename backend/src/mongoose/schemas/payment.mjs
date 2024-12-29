@@ -23,7 +23,7 @@ const paymentSchema = new mongoose.Schema({
   method: {
     type: mongoose.Schema.Types.String,
     required: true,
-    enum: ["OVO", "GoPay", "DANA", "PayPal", "Credit Card"],
+    enum: ["OVO", "GoPay", "DANA", "PayPal", "Master Card"],
   },
   transactionId: {
     type: mongoose.Schema.Types.String,

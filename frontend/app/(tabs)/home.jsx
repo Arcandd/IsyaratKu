@@ -3,6 +3,7 @@ import {
   FlatList,
   Image,
   ImageBackground,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import appBackground from "../../assets/background/app-background.png";
 import defaultProfilePicture from "../../assets/image/profile-default.png";
@@ -31,6 +32,15 @@ const HomePage = () => {
   const [displayedText, setDisplayedText] = useState("");
   const [enrolledCourses, setEnrolledCourses] = useState([]);
   const [coursesError, setCoursesError] = useState("");
+  const scrollViewRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [direction, setDirection] = useState(1);
+  const images = [
+    require("../../assets/poster/1.png"),
+    require("../../assets/poster/2.png"),
+  ];
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [courseId, setCourseId] = useState("");
 
   const checkSession = async () => {
     const token = await SecureStore.getItemAsync("sessionToken");
@@ -56,8 +66,6 @@ const HomePage = () => {
       alert("Error fetching user info!");
       await SecureStore.deleteItemAsync("sessionToken");
       router.replace("/login");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -86,6 +94,26 @@ const HomePage = () => {
     }
   };
 
+  const handleDeleteCourse = async (id) => {
+    const url = `${baseUrl}/api/courses/deleteCourse/${id}`;
+
+    try {
+      const response = await axios.delete(url);
+      const result = response.data;
+      const { message } = result;
+
+      console.log(message);
+    } catch (error) {
+      if (error.response) {
+        const errors = error.response.data.error;
+        alert(errors);
+      } else {
+        alert(error.message);
+      }
+    }
+  };
+
+  // ? Animasi teks Welcome Back
   useEffect(() => {
     const text = "Welcome back,";
     let index = 0;
@@ -108,6 +136,28 @@ const HomePage = () => {
     };
   }, []);
 
+  // ? Animasi broadcast card
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => {
+        let newIndex = prevIndex + direction;
+
+        if (newIndex >= images.length || newIndex < 0) {
+          setDirection((prevDirection) => -prevDirection);
+          newIndex = prevIndex;
+        }
+
+        scrollViewRef.current?.scrollTo({
+          x: newIndex * screenWidth,
+          animated: true,
+        });
+        return newIndex;
+      });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [direction, images.length]);
+
   useFocusEffect(
     useCallback(() => {
       checkSession();
@@ -125,7 +175,11 @@ const HomePage = () => {
   }
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      bounces={false}
+      contentContainerStyle={{ paddingBottom: 120, backgroundColor: "white" }}
+    >
       <ImageBackground
         source={appBackground}
         style={styles.background}
@@ -135,7 +189,11 @@ const HomePage = () => {
           {/* Course header Section */}
           <View style={styles.header}>
             <Image
-              source={defaultProfilePicture}
+              source={
+                userInfo.profileImage !== ""
+                  ? { uri: userInfo.profileImage }
+                  : defaultProfilePicture
+              }
               style={styles.profileImage}
               resizeMode="cover"
             />
@@ -147,36 +205,36 @@ const HomePage = () => {
 
           <View style={styles.broadcastCard}>
             <ScrollView
+              ref={scrollViewRef}
               horizontal={true}
               pagingEnabled={true}
               showsHorizontalScrollIndicator={false}
             >
-              <Image
-                source={require("../../assets/poster/1.png")}
-                style={styles.broadcastImage}
-                resizeMode="cover"
-              />
-              <Image
-                source={require("../../assets/poster/2.png")}
-                style={styles.broadcastImage}
-                resizeMode="cover"
-              />
+              {images.map((source, index) => (
+                <Image
+                  key={index}
+                  source={source}
+                  style={styles.broadcastImage}
+                  resizeMode="cover"
+                />
+              ))}
             </ScrollView>
           </View>
 
           {/* My Courses Section */}
           <View style={styles.coursesHeader}>
-            <Text style={styles.coursesTitle}>My Courses</Text>
+            <Text style={styles.coursesTitle}>
+              {userInfo.role === "user"
+                ? "My Courses"
+                : "What are you doing today?"}
+            </Text>
           </View>
 
-          {/* Courses List */}
-          <View style={styles.courseListContainer}>
-            <ScrollView
-              contentContainerStyle={styles.coursesList}
-              showsVerticalScrollIndicator={false}
-              nestedScrollEnabled={true}
-            >
-              {coursesError ? (
+          {/* Dashboard List */}
+          <View style={styles.coursesList}>
+            {userInfo.role === "user" ? (
+              // ? User dashboard
+              enrolledCourses.length === 0 ? (
                 <Text style={styles.courseError}>{coursesError}</Text>
               ) : (
                 enrolledCourses.map((course) => (
@@ -187,11 +245,15 @@ const HomePage = () => {
                   >
                     <View style={styles.courseCardContent}>
                       <Image
-                        source={defaultImage}
+                        source={
+                          course.image ? { uri: course.image } : defaultImage
+                        }
                         style={styles.courseImagePlaceholder}
                       />
+
                       <Text style={styles.courseTitle}>{course.title}</Text>
                     </View>
+
                     <Ionicons
                       name="chevron-forward"
                       size={24}
@@ -199,16 +261,145 @@ const HomePage = () => {
                     />
                   </TouchableOpacity>
                 ))
-              )}
+              )
+            ) : (
+              // ? Admin dashboard
+              <View>
+                {/* Add Course */}
+                <TouchableOpacity
+                  style={styles.addCard}
+                  onPress={() => router.push("../add/course")}
+                >
+                  <View style={styles.addCardContent}>
+                    <Ionicons name="book" size={24} color={"#2BC1F8"} />
 
-              {enrolledCourses.length > 3 ? (
-                <TouchableOpacity>
-                  <Text style={styles.viewMore}>-- View more --</Text>
+                    <Text style={styles.addText}>Add course</Text>
+                  </View>
+
+                  <Ionicons
+                    name="chevron-forward-circle-outline"
+                    size={24}
+                    color="#2BC1F8"
+                  />
                 </TouchableOpacity>
-              ) : (
-                <></>
-              )}
-            </ScrollView>
+
+                <TouchableOpacity
+                  style={styles.addCard}
+                  onPress={() => router.push("/courses")}
+                >
+                  <View style={styles.addCardContent}>
+                    <Ionicons name="document" size={24} color={"#2BC1F8"} />
+
+                    <Text style={styles.addText}>Add lessons</Text>
+                  </View>
+
+                  <Ionicons
+                    name="chevron-forward-circle-outline"
+                    size={24}
+                    color="#2BC1F8"
+                  />
+                </TouchableOpacity>
+
+                {/* Add notification */}
+                <TouchableOpacity
+                  style={styles.addCard}
+                  onPress={() => router.push("../add/notification")}
+                >
+                  <View style={styles.addCardContent}>
+                    <Ionicons
+                      name="notifications"
+                      size={24}
+                      color={"#2BC1F8"}
+                    />
+
+                    <Text style={styles.addText}>Create notification</Text>
+                  </View>
+
+                  <Ionicons
+                    name="chevron-forward-circle-outline"
+                    size={24}
+                    color="#2BC1F8"
+                  />
+                </TouchableOpacity>
+
+                {/* Delete course */}
+                <View>
+                  <TouchableOpacity
+                    style={[styles.addCard, { borderColor: "red" }]}
+                    onPress={() => setIsModalVisible(true)}
+                  >
+                    <View style={styles.addCardContent}>
+                      <Ionicons name="trash" size={24} color={"red"} />
+
+                      <Text style={styles.addText}>Delete course</Text>
+                    </View>
+
+                    <Ionicons
+                      name="chevron-forward-circle-outline"
+                      size={24}
+                      color="red"
+                    />
+                  </TouchableOpacity>
+
+                  <Modal
+                    visible={isModalVisible}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setIsModalVisible(false)}
+                  >
+                    <View style={styles.modalOverlay}>
+                      <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Confirm Deletion</Text>
+
+                        <TextInput
+                          style={styles.searchPlaceholder}
+                          placeholder="Course ID..."
+                          value={courseId}
+                          onChangeText={(value) => setCourseId(value)}
+                        />
+
+                        <View style={styles.modalActions}>
+                          <TouchableOpacity
+                            style={styles.cancelButton}
+                            onPress={() => setIsModalVisible(false)} // Close modal
+                          >
+                            <Text style={styles.cancelText}>Cancel</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={styles.deleteButton}
+                            onPress={() => {
+                              handleDeleteCourse(courseId);
+                              setCourseId("");
+                              setIsModalVisible(false);
+                            }}
+                          >
+                            <Text style={styles.deleteText}>Delete</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
+                  </Modal>
+                </View>
+
+                {/* Delete notification */}
+                <TouchableOpacity
+                  style={[styles.addCard, { borderColor: "red" }]}
+                >
+                  <View style={styles.addCardContent}>
+                    <Ionicons name="trash" size={24} color={"red"} />
+
+                    <Text style={styles.addText}>Delete notification</Text>
+                  </View>
+
+                  <Ionicons
+                    name="chevron-forward-circle-outline"
+                    size={24}
+                    color="red"
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </SafeAreaView>
       </ImageBackground>
@@ -224,7 +415,6 @@ const styles = StyleSheet.create({
     height: Dimensions.get("window").height, // ! THIS IS IT, BIAR IMAGE NYA GAK BERUBAH PAKE INI OMGGGGGG
   },
   container: {
-    flex: 1,
     paddingVertical: 20,
   },
   header: {
@@ -294,8 +484,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   courseListContainer: {
-    maxHeight: 316,
-    overflow: "hidden",
     // borderColor: "lightgray",
     // borderBottomWidth: 0.5,
   },
@@ -307,7 +495,7 @@ const styles = StyleSheet.create({
     color: "gray",
     textAlign: "center",
     fontWeight: "semibold",
-    marginTop: "40%",
+    marginTop: "36%",
   },
   courseCard: {
     flexDirection: "row",
@@ -344,5 +532,79 @@ const styles = StyleSheet.create({
   arrowText: {
     fontSize: 20,
     color: "#00aaff",
+  },
+  addCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "black",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
+    borderColor: "#45CDFF",
+    borderWidth: 1,
+  },
+  addCardContent: {
+    flexDirection: "row",
+  },
+  addText: {
+    fontWeight: "normal",
+    fontSize: 16,
+    marginLeft: 12,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)", // Dim background
+  },
+  modalContent: {
+    width: "80%",
+    padding: 20,
+    backgroundColor: "white",
+    borderRadius: 10,
+    alignItems: "center",
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  modalActions: {
+    flexDirection: "row",
+    marginTop: 20,
+    justifyContent: "space-around",
+    width: "100%",
+  },
+  cancelButton: {
+    padding: 10,
+    backgroundColor: "gray",
+    borderRadius: 5,
+  },
+  cancelText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  deleteButton: {
+    padding: 10,
+    backgroundColor: "red",
+    borderRadius: 5,
+  },
+  deleteText: {
+    color: "white",
+    fontWeight: "bold",
+  },
+  searchPlaceholder: {
+    fontSize: 16,
+    backgroundColor: "lightgray",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    width: "100%",
   },
 });
