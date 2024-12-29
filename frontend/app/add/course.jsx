@@ -86,7 +86,7 @@ const AddCourse = () => {
       setDescriptionError("");
       setPriceError("");
 
-      router.push("/home");
+      router.back();
     } catch (error) {
       setTitleError("");
       setDescriptionError("");

@@ -1,4 +1,5 @@
 import {
+  ActivityIndicator,
   Dimensions,
   Image,
   ImageBackground,
@@ -26,6 +27,7 @@ const CourseDetail = () => {
   const [lessons, setLessons] = useState([]);
   const [error, setError] = useState("");
   const [user, setUser] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const fetchUser = async () => {
     const url = `${baseUrl}/api/user/profile`;
@@ -85,6 +87,25 @@ const CourseDetail = () => {
     }
   };
 
+  const handleDeleteCourse = async () => {
+    const url = `${baseUrl}/api/courses/deleteCourse/${course._id}`;
+
+    try {
+      const response = await axios.delete(url);
+      const result = response.data;
+      const { message } = result;
+
+      router.back();
+    } catch (error) {
+      if (error.response) {
+        const errors = error.response.data.error;
+        alert(errors);
+      } else {
+        alert(error.message);
+      }
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       const fetchData = async () => {
@@ -108,81 +129,98 @@ const CourseDetail = () => {
   }
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-      <ImageBackground
-        source={require("../../assets/background/app-background-3.png")}
-        style={styles.background}
-        resizeMode="cover"
+    <View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+        contentContainerStyle={{ paddingBottom: 40, backgroundColor: "white" }}
       >
-        <SafeAreaView style={styles.container}>
+        <ImageBackground
+          source={require("../../assets/background/app-background-3.png")}
+          style={styles.background}
+          resizeMode="cover"
+        >
+          <SafeAreaView style={styles.container}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+            >
+              <AntDesign name="arrowleft" size={32} color="white" />
+            </TouchableOpacity>
+
+            <Text style={styles.title}>{course.title}</Text>
+
+            <Text style={styles.descriptionTitle}>Description:</Text>
+            <Text style={styles.description}>{course.description}</Text>
+
+            <View style={styles.lessonsContainer}>
+              <Text style={styles.lessonsTitle}>Lessons:</Text>
+
+              <View>
+                {lessons.length > 0 ? (
+                  lessons.map((lesson, index) => (
+                    <TouchableOpacity
+                      key={lesson._id}
+                      style={styles.lessonCard}
+                      onPress={() =>
+                        router.push(
+                          `courseDetail/${course._id}/lesson/${lesson._id}`
+                        )
+                      }
+                    >
+                      <View style={styles.lessonCardContent}>
+                        <Text
+                          style={styles.lessonTitle}
+                          numberOfLines={1}
+                          ellipsizeMode="tail"
+                        >
+                          Lesson {index + 1}: {lesson.title}
+                        </Text>
+                      </View>
+
+                      <Ionicons
+                        name="chevron-forward-circle-outline"
+                        size={24}
+                        color="#00aaff"
+                      />
+                    </TouchableOpacity>
+                  ))
+                ) : (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}!</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          </SafeAreaView>
+        </ImageBackground>
+      </ScrollView>
+
+      {/* Add lesson for admin */}
+      {user.role === "admin" ? (
+        <View style={styles.addButtonContainer}>
           <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
+            style={styles.addButton}
+            onPress={() => router.push(`/add/lesson?id=${courseId}`)} // ? Cara untuk passing value pake query, nanti di page selanjut e pake useLocalSearchParams()
           >
-            <AntDesign name="arrowleft" size={32} color="white" />
+            <Ionicons name="add" size={32} />
           </TouchableOpacity>
 
-          <Text style={styles.title}>{course.title}</Text>
-
-          <Text style={styles.descriptionTitle}>Description:</Text>
-          <Text style={styles.description}>{course.description}</Text>
-
-          <View style={styles.lessonsContainer}>
-            <Text style={styles.lessonsTitle}>Lessons:</Text>
-
-            <View>
-              {lessons.length > 0 ? (
-                lessons.map((lesson, index) => (
-                  <TouchableOpacity
-                    key={lesson._id}
-                    style={styles.lessonCard}
-                    onPress={() =>
-                      router.push(
-                        `courseDetail/${course._id}/lesson/${lesson._id}`
-                      )
-                    }
-                  >
-                    <View style={styles.lessonCardContent}>
-                      <Text
-                        style={styles.lessonTitle}
-                        numberOfLines={1}
-                        ellipsizeMode="tail"
-                      >
-                        Lesson {index + 1}: {lesson.title}
-                      </Text>
-                    </View>
-
-                    <Ionicons
-                      name="chevron-forward-circle-outline"
-                      size={24}
-                      color="#00aaff"
-                    />
-                  </TouchableOpacity>
-                ))
-              ) : (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorText}>{error}!</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </SafeAreaView>
-
-        {/* Add lesson for admin */}
-        {user.role === "admin" ? (
-          <View style={styles.addButtonContainer}>
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => router.push(`/add/lesson?id=${courseId}`)} // ? Cara untuk passing value pake query, nanti di page selanjut e pake useLocalSearchParams()
-            >
-              <Ionicons name="add" size={36} />
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <></>
-        )}
-      </ImageBackground>
-    </ScrollView>
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: "red" }]}
+            onPress={() => handleDeleteCourse()} // ? Cara untuk passing value pake query, nanti di page selanjut e pake useLocalSearchParams()
+          >
+            {deleteLoading ? (
+              <ActivityIndicator color={"white"} size={"small"} />
+            ) : (
+              <Ionicons name="trash" size={32} color={"white"} />
+            )}
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <></>
+      )}
+    </View>
   );
 };
 
@@ -265,7 +303,7 @@ const styles = StyleSheet.create({
   errorContainer: {
     justifyContent: "center",
     alignItems: "center",
-    height: "72%",
+    height: "44%",
   },
   errorText: {
     color: "red",
@@ -275,15 +313,20 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 32,
     right: 20,
+    height: 120,
+    justifyContent: "space-between",
   },
   addButton: {
     backgroundColor: "white",
     borderRadius: "50%",
-    padding: 8,
     shadowColor: "black",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 4,
+    justifyContent: "center",
+    alignItems: "center",
+    height: 52,
+    width: 52,
   },
 });

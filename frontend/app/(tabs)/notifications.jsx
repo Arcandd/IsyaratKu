@@ -117,7 +117,7 @@ const NotificationsPage = () => {
             style={styles.addButton}
             onPress={() => router.push("../add/notification")}
           >
-            <Ionicons name="add" size={36} />
+            <Ionicons name="add" size={32} />
           </TouchableOpacity>
         </View>
       ) : (
@@ -234,11 +234,14 @@ const styles = StyleSheet.create({
   addButton: {
     backgroundColor: "white",
     borderRadius: "50%",
-    padding: 8,
     shadowColor: "black",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 4,
+    justifyContent: "center",
+    alignItems: "center",
+    height: 52,
+    width: 52,
   },
 });

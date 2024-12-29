@@ -309,6 +309,8 @@ router.delete("/deleteLesson/:id", async (req, res) => {
   if (!req.user || req.user.role === "user")
     return res.status(401).json({ error: "Unauthorized" });
 
+  console.log('inside delete lesson')
+
   const {
     params: { id },
   } = req;

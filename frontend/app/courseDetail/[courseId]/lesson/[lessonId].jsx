@@ -26,6 +26,8 @@ const LessonPage = () => {
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState(null);
   const [videoSource, setVideoSource] = useState("");
+  const [user, setUser] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ? Video stuff
   const player = useVideoPlayer(videoSource, (player) => {
@@ -36,6 +38,26 @@ const LessonPage = () => {
   const { status } = useEvent(player, "statusChange", {
     status: player.status,
   });
+
+  const fetchUserInfo = async () => {
+    const url = `${baseUrl}/api/user/profile`;
+
+    try {
+      const response = await axios.get(url);
+      const result = response.data;
+      const { user } = result;
+
+      if (!user) {
+        throw new Error("Authorization expired or invalid");
+      }
+
+      setUser(user);
+    } catch (error) {
+      alert("Error fetching user info!");
+      await SecureStore.deleteItemAsync("sessionToken");
+      router.replace("/login");
+    }
+  };
 
   const fetchLesson = async () => {
     const url = `${baseUrl}/api/courses/${courseId}/lesson/${lessonId}`;
@@ -54,13 +76,44 @@ const LessonPage = () => {
       } else {
         alert(error.message);
       }
+    }
+  };
+
+  const handleDeleteLesson = async () => {
+    const url = `${baseUrl}/api/courses/deleteLesson/${lesson._id}`;
+    setDeleteLoading(true);
+
+    try {
+      const response = await axios.delete(url);
+      const result = response.data;
+      const { message } = result;
+
+      router.back();
+    } catch (error) {
+      if (error.response) {
+        const errors = error.response.data.error;
+        alert(errors);
+      } else {
+        alert(error.message);
+      }
     } finally {
-      setLoading(false);
+      setDeleteLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLesson();
+    const fetchData = async () => {
+      try {
+        await fetchUserInfo();
+        await fetchLesson();
+      } catch (error) {
+        alert(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
   if (loading) {
@@ -92,6 +145,7 @@ const LessonPage = () => {
           <Text style={styles.deliveryModeTitle}>Delivery Mode</Text>
           <Text style={styles.deliveryMode}>YouTube Video</Text>
 
+          {/* Video */}
           <View style={styles.videoContainer}>
             {status === "loading" ? (
               <ActivityIndicator
@@ -108,6 +162,36 @@ const LessonPage = () => {
               />
             )}
           </View>
+
+          {/* Delete lesson */}
+          {user.role === "admin" ? (
+            <TouchableOpacity
+              style={{
+                backgroundColor: "red",
+                marginTop: 20,
+                paddingVertical: 12,
+                borderRadius: 8,
+              }}
+              onPress={() => handleDeleteLesson()}
+            >
+              {deleteLoading ? (
+                <ActivityIndicator color={"white"} size={"small"} />
+              ) : (
+                <Text
+                  style={{
+                    color: "white",
+                    fontWeight: "bold",
+                    textAlign: "center",
+                    fontSize: 16,
+                  }}
+                >
+                  Delete Lesson
+                </Text>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <></>
+          )}
         </View>
       </SafeAreaView>
     </ImageBackground>

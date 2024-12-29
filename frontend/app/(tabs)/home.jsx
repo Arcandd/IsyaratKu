@@ -94,25 +94,6 @@ const HomePage = () => {
     }
   };
 
-  const handleDeleteCourse = async (id) => {
-    const url = `${baseUrl}/api/courses/deleteCourse/${id}`;
-
-    try {
-      const response = await axios.delete(url);
-      const result = response.data;
-      const { message } = result;
-
-      console.log(message);
-    } catch (error) {
-      if (error.response) {
-        const errors = error.response.data.error;
-        alert(errors);
-      } else {
-        alert(error.message);
-      }
-    }
-  };
-
   // ? Animasi teks Welcome Back
   useEffect(() => {
     const text = "Welcome back,";
@@ -326,12 +307,12 @@ const HomePage = () => {
                 <View>
                   <TouchableOpacity
                     style={[styles.addCard, { borderColor: "red" }]}
-                    onPress={() => setIsModalVisible(true)}
+                    onPress={() => router.push("/courses")}
                   >
                     <View style={styles.addCardContent}>
                       <Ionicons name="trash" size={24} color={"red"} />
 
-                      <Text style={styles.addText}>Delete course</Text>
+                      <Text style={styles.addText}>Delete course / lesson</Text>
                     </View>
 
                     <Ionicons
@@ -340,64 +321,7 @@ const HomePage = () => {
                       color="red"
                     />
                   </TouchableOpacity>
-
-                  <Modal
-                    visible={isModalVisible}
-                    transparent={true}
-                    animationType="fade"
-                    onRequestClose={() => setIsModalVisible(false)}
-                  >
-                    <View style={styles.modalOverlay}>
-                      <View style={styles.modalContent}>
-                        <Text style={styles.modalTitle}>Confirm Deletion</Text>
-
-                        <TextInput
-                          style={styles.searchPlaceholder}
-                          placeholder="Course ID..."
-                          value={courseId}
-                          onChangeText={(value) => setCourseId(value)}
-                        />
-
-                        <View style={styles.modalActions}>
-                          <TouchableOpacity
-                            style={styles.cancelButton}
-                            onPress={() => setIsModalVisible(false)} // Close modal
-                          >
-                            <Text style={styles.cancelText}>Cancel</Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            style={styles.deleteButton}
-                            onPress={() => {
-                              handleDeleteCourse(courseId);
-                              setCourseId("");
-                              setIsModalVisible(false);
-                            }}
-                          >
-                            <Text style={styles.deleteText}>Delete</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    </View>
-                  </Modal>
                 </View>
-
-                {/* Delete notification */}
-                <TouchableOpacity
-                  style={[styles.addCard, { borderColor: "red" }]}
-                >
-                  <View style={styles.addCardContent}>
-                    <Ionicons name="trash" size={24} color={"red"} />
-
-                    <Text style={styles.addText}>Delete notification</Text>
-                  </View>
-
-                  <Ionicons
-                    name="chevron-forward-circle-outline"
-                    size={24}
-                    color="red"
-                  />
-                </TouchableOpacity>
               </View>
             )}
           </View>
