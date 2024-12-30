@@ -23,10 +23,12 @@ jobs:
       # Step to install dependencies
       - name: Install dependencies
         run: npm install
+        working-directory: ./frontend
 
       # Step to install EAS CLI
       - name: Install EAS CLI
         run: npm install -g eas-cli
+        working-directory: ./frontend
 
       # Set Expo token from GitHub Secrets to environment variable
       - name: Set Expo token
@@ -35,6 +37,7 @@ jobs:
       # Run EAS Build for Android (APK)
       - name: Build with EAS (Android APK)
         run: eas build --platform android --profile androidapk --non-interactive
+        working-directory: ./frontend
 
       # Upload the build artifact (APK)
       - name: Upload Android APK build artifact
