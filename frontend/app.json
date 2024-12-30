@@ -20,7 +20,12 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.arcand.frontend"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -31,6 +36,14 @@
       "expo-camera",
       "expo-image-picker",
       "expo-video"
-    ]
+    ],
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "5919cbfc-f755-4225-8356-2ae3e670ecc9"
+      }
+    }
   }
 }

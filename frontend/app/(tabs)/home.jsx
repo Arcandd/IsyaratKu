@@ -37,7 +37,7 @@ const HomePage = () => {
   const [direction, setDirection] = useState(1);
   const images = [
     require("../../assets/poster/1.png"),
-    require("../../assets/poster/2.png"),
+    require("../../assets/poster/1.png"),
   ];
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [courseId, setCourseId] = useState("");
